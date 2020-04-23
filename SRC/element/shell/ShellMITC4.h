@@ -85,6 +85,10 @@ class ShellMITC4 : public Element {
     //revert to start 
     int revertToStart( ) ;
 
+    // Massimo Petracca 24/04/2020. added to conform to all other elements
+    // update
+    int update( );
+
     //print out element data
     void Print( OPS_Stream &s, int flag ) ;
 	
@@ -194,6 +198,11 @@ class ShellMITC4 : public Element {
     Vector *load;
     Matrix *Ki;
     double init_disp[4][6];
+
+    // Massimo Petracca 24/04/2020
+    // added to store the drilling strains computed in "update" to be used
+    // later in forming tangent and residual
+    double drilling_strains[4];
 } ; 
 
 

@@ -47,7 +47,7 @@
 #include <Renderer.h>
 #include <ElementResponse.h>
 #include <ElementalLoad.h>
-
+#include <Parameter.h>
 #include <Channel.h>
 #include <FEM_ObjectBroker.h>
 #include <elementAPI.h>
@@ -70,7 +70,7 @@ OPS_ShellMITC4(void)
   int numArgs = OPS_GetNumRemainingInputArgs();
   
   if (numArgs < 6) {
-    opserr << "Want: element ShellMITC4 $tag $iNode $jNoe $kNode $lNode $secTag<-updateBasis>";
+    opserr << "Want: element ShellMITC4 $tag $iNode $jNode $kNode $lNode $secTag <-updateBasis> <-scaleDrilling $drillingScaleFactor>";
     return 0;	
   }
   
@@ -81,11 +81,26 @@ OPS_ShellMITC4(void)
     return 0;
   }
   bool updateBasis = false;
-
-  if (numArgs == 7) {
-    const char* type = OPS_GetString();    
-    if(strcmp(type,"-updateBasis") == 0) 
-      updateBasis = true;
+  double drillingScale = 1.0;
+  int count = 6;
+  while (count < numArgs) {
+      const char* type = OPS_GetString();
+      if (strcmp(type, "-updateBasis") == 0) {
+          updateBasis = true;
+      }
+      else if (strcmp(type, "-scaleDrilling") == 0) {
+          if (numArgs > count + 1) {
+              numData = 1;
+              double dData;
+              if (OPS_GetDouble(&numData, &dData) != 0) {
+                  opserr << "Element ShellMITC4 WARNING: invalid double for $drillingScaleFactor\n";
+                  return 0;
+              }
+              drillingScale = dData;
+              ++count;
+          }
+      }
+      ++count;
   }
 
   SectionForceDeformation *theSection = OPS_getSectionForceDeformation(iData[5]);
@@ -209,7 +224,7 @@ double ShellMITC4::wg[4] ;
 //null constructor
 ShellMITC4::ShellMITC4( ) :
 Element( 0, ELE_TAG_ShellMITC4 ),
-connectedExternalNodes(4), load(0), Ki(0), doUpdateBasis(false)
+connectedExternalNodes(4), load(0), Ki(0), doUpdateBasis(false), drilling_scale(1.0)
 { 
   for (int i = 0 ;  i < 4; i++ ) 
     materialPointers[i] = 0;
@@ -250,9 +265,10 @@ ShellMITC4::ShellMITC4(  int tag,
 			 int node3,
                          int node4,
 			 SectionForceDeformation &theMaterial,
-			 bool UpdateBasis) :
+			 bool UpdateBasis,
+             double drillingScale) :
 Element( tag, ELE_TAG_ShellMITC4 ),
-connectedExternalNodes(4), load(0), Ki(0), doUpdateBasis(UpdateBasis)
+connectedExternalNodes(4), load(0), Ki(0), doUpdateBasis(UpdateBasis), drilling_scale(drillingScale)
 {
   int i;
 
@@ -890,6 +906,33 @@ ShellMITC4::getResponse(int responseID, Information &eleInfo)
   cnt=0;
 }
 
+int ShellMITC4::setParameter(const char** argv, int argc, Parameter& param)
+{
+    if (strcmp(argv[0], "drillingScale") == 0 || strcmp(argv[0], "DrillingScale") == 0) {
+        param.setValue(drilling_scale);
+        return param.addObject(1, this);
+    }
+    else {
+        // just forward it to all sections.
+        int res = 0;
+        for (int i = 0; i < 4; i++) 
+            res += materialPointers[i]->setParameter(argv, argc, param);
+        return res;
+    }
+}
+
+int ShellMITC4::updateParameter(int parameterID, Information& info)
+{
+    switch (parameterID)
+    {
+    case 1:
+        // drilling scale factor
+        drilling_scale = info.theDouble;
+    default:
+        break;
+    }
+    return 0;
+}
 
 //return stiffness matrix 
 const Matrix&  ShellMITC4::getTangentStiff( ) 
@@ -1137,7 +1180,7 @@ const Matrix&  ShellMITC4::getInitialStiff( )
       BJtranD.addMatrixProduct(0.0, BJtran,dd,1.0 ) ;
       
       for (p=0; p<ndf; p++) 
-	BdrillJ[p] *= ( Ktt*dvol[i] ) ;
+	BdrillJ[p] *= ( drilling_scale*Ktt*dvol[i] ) ;
       
       kk = 0 ;
       for ( k = 0; k < numnodes; k++ ) {
@@ -1644,7 +1687,7 @@ ShellMITC4::formResidAndTangent( int tang_flag )
     stress = materialPointers[i]->getStressResultant( ) ;
 
     //drilling "stress" 
-    tauDrill = Ktt * drilling_strains[i] ;
+    tauDrill = drilling_scale * Ktt * drilling_strains[i] ;
 
     //multiply by volume element
     stress   *= dvol[i] ;
@@ -1698,7 +1741,7 @@ ShellMITC4::formResidAndTangent( int tang_flag )
 	    BJtranD.addMatrixProduct(0.0, BJtran,dd,1.0 ) ;
 
 	    for (p=0; p<ndf; p++) 
-	      BdrillJ[p] *= ( Ktt*dvol[i] ) ;
+	      BdrillJ[p] *= ( drilling_scale*Ktt*dvol[i] ) ;
 
         kk = 0 ;
         for ( k = 0; k < numnodes; k++ ) {
@@ -2335,7 +2378,7 @@ int  ShellMITC4::sendSelf (int commitTag, Channel &theChannel)
     return res;
   }
 
-  static Vector vectData(5+6*4);
+  static Vector vectData(5+6*4+1);
   vectData(0) = Ktt;
   vectData(1) = alphaM;
   vectData(2) = betaK;
@@ -2351,6 +2394,8 @@ int  ShellMITC4::sendSelf (int commitTag, Channel &theChannel)
       pos ++;
     }
   }
+
+  vectData(vectData.Size() - 1) = drilling_scale;
 
   res += theChannel.sendVector(dataTag, commitTag, vectData);
   if (res < 0) {
@@ -2396,7 +2441,7 @@ int  ShellMITC4::recvSelf (int commitTag,
   else
     doUpdateBasis = false;
 
-  static Vector vectData(5 + 6*4);
+  static Vector vectData(5 + 6*4 + 1);
   res += theChannel.recvVector(dataTag, commitTag, vectData);
   if (res < 0) {
     opserr << "WARNING ShellMITC4::sendSelf() - " << this->getTag() << " failed to send ID\n";
@@ -2420,6 +2465,7 @@ int  ShellMITC4::recvSelf (int commitTag,
     }
   }
 
+  drilling_scale = vectData(vectData.Size() - 1);
 
   int i;
 

@@ -59,7 +59,8 @@ class ShellMITC4 : public Element {
 	      int node3,
 	      int node4,
 	      SectionForceDeformation &theMaterial,
-	      bool updateBasis=false) ;
+	      bool updateBasis=false,
+          double drillingScale = 1.0) ;
   
   //destructor 
   virtual ~ShellMITC4( ) ;
@@ -114,8 +115,11 @@ class ShellMITC4 : public Element {
 		           &theBroker );
 
 
-    Response* setResponse( const char **argv, int argc, OPS_Stream &output );
-    int getResponse( int responseID, Information &eleInfo );
+    Response* setResponse(const char** argv, int argc, OPS_Stream& output);
+    int getResponse(int parameterID, Information& info);
+
+    int setParameter(const char** argv, int argc, Parameter& param);
+    int updateParameter(int responseID, Information& eleInformation);
       
     //plotting 
     int displaySelf(Renderer &, int mode, float fact, const char **displayModes=0, int numModes=0);
@@ -203,6 +207,8 @@ class ShellMITC4 : public Element {
     // added to store the drilling strains computed in "update" to be used
     // later in forming tangent and residual
     double drilling_strains[4];
+    // allow scaling of artificial drilling stiffness (default = 1 for backward compatibility)
+    double drilling_scale;
 } ; 
 
 

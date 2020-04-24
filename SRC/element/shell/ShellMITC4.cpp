@@ -111,7 +111,7 @@ OPS_ShellMITC4(void)
   }
   
   theElement = new ShellMITC4(iData[0], iData[1], iData[2], iData[3],
-			      iData[4], *theSection, updateBasis);
+			      iData[4], *theSection, updateBasis, drillingScale);
 
   return theElement;
 }

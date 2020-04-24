@@ -35,8 +35,6 @@
 #include <OPS_Globals.h>
 #include <elementAPI.h>
 
-#define ND_TAG_OrthotropicMaterial 35526557578673
-
 void *OPS_OrthotropicMaterial(void)
 {
 	NDMaterial *theOrthotropicMaterial = 0;

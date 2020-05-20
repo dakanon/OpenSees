@@ -71,6 +71,9 @@ public:
 	virtual int sendSelf(int commitTag, Channel &theChannel);
 	int recvSelf(int commitTag, Channel &theChannel, FEM_ObjectBroker &theBroker);
 
+	int setParameter(const char** argv, int argc, Parameter& param);
+	virtual Response* setResponse(const char** argv, int argc, OPS_Stream& s);
+
 private:
 	void isoToOrtho();
 

@@ -338,6 +338,28 @@ int OrthotropicMaterial::recvSelf(int commitTag, Channel & theChannel, FEM_Objec
 	return 0;
 }
 
+int OrthotropicMaterial::setParameter(const char** argv, int argc, Parameter& param)
+{
+	return theIsotropicMaterial->setParameter(argv, argc, param);
+}
+
+Response* OrthotropicMaterial::setResponse(const char** argv, int argc, OPS_Stream& s)
+{
+	// for strain, stress and tangent use the base class implementation
+		// so that the output will be that of the adapter
+	if (strcmp(argv[0], "Tangent") == 0 ||
+		strcmp(argv[0], "tangent") == 0 ||
+		strcmp(argv[0], "stress") == 0 ||
+		strcmp(argv[0], "stresses") == 0 ||
+		strcmp(argv[0], "strain") == 0 ||
+		strcmp(argv[0], "strains") == 0
+		) {
+		return NDMaterial::setResponse(argv, argc, s);
+	}
+	// otherwise, for other custom results, forward the call to the adaptee
+	return theIsotropicMaterial->setResponse(argv, argc, s);
+}
+
 void OrthotropicMaterial::isoToOrtho()
 {
 	// move back to orthotropic space

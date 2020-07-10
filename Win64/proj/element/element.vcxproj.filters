@@ -647,6 +647,9 @@
     <ClCompile Include="..\..\..\SRC\element\shell\ASDShellQ4.cpp">
       <Filter>shell</Filter>
     </ClCompile>
+    <ClCompile Include="..\..\..\SRC\element\zeroLength\ZeroLengthImplexContact.cpp">
+      <Filter>zeroLength</Filter>
+    </ClCompile>
     <ClCompile Include="..\..\..\SRC\element\PFEMElement\PFEMElement2D.cpp">
       <Filter>pfem</Filter>
     </ClCompile>
@@ -1350,6 +1353,9 @@
     </ClInclude>
     <ClInclude Include="..\..\..\SRC\element\shell\ASDShellQ4.h">
       <Filter>shell</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\SRC\element\zeroLength\ZeroLengthImplexContact.h">
+      <Filter>zeroLength</Filter>
     </ClInclude>
     <ClInclude Include="..\..\..\SRC\element\PFEMElement\PFEMElement2D.h">
       <Filter>pfem</Filter>

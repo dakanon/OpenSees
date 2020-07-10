@@ -1013,6 +1013,7 @@ VTK_Recorder::setVTKType()
     vtktypes[ELE_TAG_ZeroLengthInterface2D] = VTK_POLY_VERTEX;
     vtktypes[ELE_TAG_CoupledZeroLength] = VTK_POLY_VERTEX;
     vtktypes[ELE_TAG_ZeroLengthRocking] = VTK_POLY_VERTEX;
+    vtktypes[ELE_TAG_ZeroLengthImplexContact] = VTK_POLY_VERTEX;
     vtktypes[ELE_TAG_NLBeamColumn2d] = VTK_LINE;
     vtktypes[ELE_TAG_NLBeamColumn3d] = VTK_LINE;
     vtktypes[ELE_TAG_LargeDispBeamColumn3d] = VTK_LINE;

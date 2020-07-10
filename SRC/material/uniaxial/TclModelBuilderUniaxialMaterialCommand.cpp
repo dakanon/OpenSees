@@ -628,12 +628,12 @@ TclModelBuilderUniaxialMaterialCommand (ClientData clientData, Tcl_Interp *inter
         else
             return TCL_ERROR;
 
-    } else if (strcmp(argv[1], "DegradingPinchedBW") == 0) {
+    /*} else if (strcmp(argv[1], "DegradingPinchedBW") == 0) {
         void *theMat = OPS_DegradingPinchedBW();
         if (theMat != 0)
             theMaterial = (UniaxialMaterial *)theMat;
         else
-            return TCL_ERROR;
+            return TCL_ERROR;*/
 
     }
     else if (strcmp(argv[1], "IMKBilin") == 0) {

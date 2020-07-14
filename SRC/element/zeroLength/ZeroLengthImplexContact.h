@@ -120,6 +120,7 @@
 
 #include <Element.h>
 #include <Matrix.h>
+#include <array>
 
 #define	LENTOL 1.0e-6                                   // tolerance for zero-length of the element
 
@@ -150,7 +151,7 @@ class ZeroLengthImplexContact : public Element {
                 bool dtime_is_user_defined = false;
                 bool dtime_first_set = false;
                 // moduli
-                Matrix C    = Matrix(3,3);                  // tangent modulus matrix
+                Matrix C = Matrix(3, 3);                  // tangent modulus matrix
                 // constructor
                 StateVariables(void) = default;
                 StateVariables(const StateVariables&) = default;
@@ -186,10 +187,6 @@ class ZeroLengthImplexContact : public Element {
         const Matrix& getDamp(void);
         const Matrix& getMass(void);
 
-        void zeroLoad(void);
-        int addLoad(ElementalLoad* theLoad, double loadFactor);
-        int addInertiaLoadToUnbalance(const Vector& accel);
-
         const Vector& getResistingForce(void);
         const Vector& getResistingForceIncInertia(void);
 
@@ -203,51 +200,37 @@ class ZeroLengthImplexContact : public Element {
         int getResponse(int responseID, Information& eleInformation);
         int updateParameter(int parameterID, double value);
 
-    protected:
-
     private:
-        // element info
-        static const int  numNDS;                                       // number of connected nodes
-        ID  connectedExternalNodes;                                     // contains the tags of the end nodes
-        double Knormal;			                                        // normal penalty
-        double Kfriction;			                                    // tangential penalty
-        double mu;			                                            // friction coefficient
-        double cohesion;                                                // cohension
-        int numDIM;                                                     // model dimension
-        int numDOF;                                                     // no. of degree of freedom in total
-        bool doImplEx;                                                  // integration type flag
-        Vector Xorient;                                                 // contact axis orientation in global coords.
-        double gap;                                                     // initial gap (computed once at element addition to domain)
-
-        // element pointers
-        Node*   theNodes[2];                                            // node pointers
-        Vector* theDispVector;                                          // pointer to displacement vector (a class wide Vector)
-        Vector* theResidVector;                                         // pointer to residual vector (a class wide Vector)
-        Matrix* theStiffMatrix;                                         // pointer to stiffness matrix (a class wide Matrix)
-        Matrix* theTransMatrix;                                         // pointer to geometric transformation matrix (a class wide Matrix)
-
-        // state variables
-        StateVariables sv;                                              // element & material state variables
-
         // global and local reference systems
-        void computeRotMatrix(void);                                    // compute rotation matrix | normal vect. in global coord. sys.  
+        const Matrix& computeRotMatrix();                                    // compute rotation matrix | normal vect. in global coord. sys.  
 
         // residual and tangent computation
         void computeMaterialStuff(bool e_phase, bool t_flag);           // compute contact material response       |e_phase = explicit phase|
         void computeElementStuff();                                     // compute local strain tensor at int. pt. |t_flag = tangent_flag   |
 
-        // static data - single copy for all objects of the class
-        static Matrix zlcSM4;                                           // class wide 4-by-4 stiffness matrix
-        static Matrix zlcSM6;                                           // class wide 6-by-6 stiffness matrix
-        static Matrix zlcSM12;                                          // class wide 12-by-12 stiffness matrix
-        static Matrix zlcTM4;                                           // class wide 4-by-4 transformation matrix
-        static Matrix zlcTM6;                                           // class wide 6-by-6 transformation matrix
-        static Matrix zlcTM12;                                          // class wide 12-by-12 transformation matrix
-        static Vector zlcRV4;                                           // class wide 4-by-1 residual vector
-        static Vector zlcRV6;                                           // class wide 6-by-1 residual vector
-        static Vector zlcRV12;                                          // class wide 12-by-1 residual vector
-        static Vector zlcDV4;                                           // class wide 4-by-1 displacement vector
-        static Vector zlcDV6;                                           // class wide 6-by-1 displacement vector
-        static Vector zlcDV12;                                          // class wide 12-by-1 displacement vector
+        // compute strain
+        void computeStrain();
+        // compute material response
+        void updateInternal(bool do_implex, bool do_tangent);
+
+    private:
+        // element info
+        ID connectedExternalNodes = ID(2); // contains the tags of the end nodes
+        double Knormal = 0.0; // normal penalty
+        double Kfriction = 0.0; // tangential penalty
+        double mu = 0.0; // friction coefficient
+        double cohesion = 0.0; // cohension
+        int numDIM = 0; // model dimension
+        std::array<int, 2> numDOF = { { 0, 0 } }; // no. of DOF at 1st and 2nd node
+        bool doImplEx = false; // integration type flag
+        Vector Xorient = Vector(3); // contact axis orientation in global coords.
+        std::array<std::array<double, 3>, 2> U0 = { {{0.0,0.0,0.0}, {0.0,0.0,0.0}} }; // initial displacement at node 1 and 2
+
+        // element pointers
+        std::array<Node*, 2> theNodes = { { nullptr, nullptr } }; // node pointers
+
+        // state variables
+        StateVariables sv; // element & material state variables
+
 };
 #endif

@@ -108,14 +108,6 @@
    Oliver, J., Huespe, A.E. and Cante, J.C. "An Implicit/Explicit Integration Scheme to
         Increase Computability of Non-linear Material and Contact/Friction Problems", Comp.
         Methods Appl. Mech. Eng., 197, 1865-1889 (2008)
-
-   Credits:
-   Some of the programming ideas used in this element were influenced by the following classes in the library: 
-   Truss.cpp
-   ZeroLength.cpp
-   FourNodeQuad.cpp
-   DamageTC1DMaterial.cpp
-   ZeroLengthContact3D.cpp
  */
 
 #include <Element.h>
@@ -201,13 +193,12 @@ class ZeroLengthImplexContact : public Element {
         int updateParameter(int parameterID, double value);
 
     private:
-        // global and local reference systems
-        const Matrix& computeRotMatrix();                                    // compute rotation matrix | normal vect. in global coord. sys.  
+        // compute rotation matrix
+        const Matrix& computeRotMatrix();                                    
 
         // residual and tangent computation
-        void computeMaterialStuff(bool e_phase, bool t_flag);           // compute contact material response       |e_phase = explicit phase|
-        void computeElementStuff();                                     // compute local strain tensor at int. pt. |t_flag = tangent_flag   |
-
+        void computeMaterialStuff(bool e_phase, bool t_flag);           // compute contact material response
+                                                                                 
         // compute strain
         void computeStrain();
         // compute material response

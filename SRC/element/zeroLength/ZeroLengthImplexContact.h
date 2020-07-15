@@ -194,15 +194,20 @@ class ZeroLengthImplexContact : public Element {
 
     private:
         // compute rotation matrix
-        const Matrix& computeRotMatrix();                                    
+        const Matrix& computeRotMatrix1();
+        const Matrix& computeRotMatrix2();                                    
 
         // residual and tangent computation
         void computeMaterialStuff(bool e_phase, bool t_flag);           // compute contact material response
-                                                                                 
+       
+        // compute local initial gap
+        const Vector& computeLocalInitialGap();
         // compute strain
         void computeStrain();
         // compute material response
         void updateInternal(bool do_implex, bool do_tangent);
+        // compute siffness
+        void computeGenericStiffness(const Matrix& C, Matrix& K);
 
     private:
         // element info
@@ -215,7 +220,6 @@ class ZeroLengthImplexContact : public Element {
         std::array<int, 2> numDOF = { { 0, 0 } }; // no. of DOF at 1st and 2nd node
         bool doImplEx = false; // integration type flag
         Vector Xorient = Vector(3); // contact axis orientation in global coords.
-        std::array<std::array<double, 3>, 2> U0 = { {{0.0,0.0,0.0}, {0.0,0.0,0.0}} }; // initial displacement at node 1 and 2
 
         // element pointers
         std::array<Node*, 2> theNodes = { { nullptr, nullptr } }; // node pointers

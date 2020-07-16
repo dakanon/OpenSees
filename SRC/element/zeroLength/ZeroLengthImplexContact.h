@@ -73,28 +73,29 @@
                 rFlag = 0 implicit, backward-euler integration scheme (default)
                 rFlag = 1 impl-ex, implicit/explicit integration scheme
 
-
   Description: This file contains the class definition for ZeroLengthImplexContact.
   (1) A ZeroLengthImplexContact element is defined by two nodes in R^2 (x,y) or R^3 (x,y,z).
   (2) Penalty (Kn,Kt) method is used to constrain displacements in the normal direction,
       and in the tangential direction along with a Mohr-Coulomb frictional yield surface.
-  (3) Optionally, the normal vector of the contact plane, orienting the contact axis can be
+  (3) In 2D and 3D, 2, 4, 6 or 12 DOFs with the possibility of having  different DOFsets at 
+      each of the two nodes is supported automatically. (Example: Solid <--> Shell contact in 3D)  
+  (4) Optionally, the normal vector of the contact plane, orienting the contact axis can be
       specified by the user. Otherwise, the global X vector is chosen by default.
-  (4) Optionally, the user can prefer using the IMPL-EX scheme over the standard Backward Euler
+  (5) Optionally, the user can prefer using the IMPL-EX scheme over the standard Backward Euler
       return mapping scheme for the implicit-explicit integration of the contact material residual
       and tangent modulus.
-  (5) Currently, only small deformations are considered, however an update on large deformations
+  (6) Currently, only small deformations are considered, however an update on large deformations
       may be implemented in the near future.
-  (6) In IMPL-EX scheme, the material tangent and residual at the current step (n+1) are computed
+  (7) In IMPL-EX scheme, the material tangent and residual at the current step (n+1) are computed
       by lineary extrapolating the material parameters commited at steps (n) and (n-1). Then, after
       the convergence criteria is achieved, extrapolated material parameters are corrected with a 
       step of traditional implicit computation from the last commited step (n). Finally, corrected 
       parameters are saved as the current step (n+1) commited variables.
-  (7) Along with the Newton-Raphson method, IMPL-EX results in a step-linear solution of the material 
-      non-linearity, and a symmetric, semi-positive definite tangent tensor regardless of the analytical
-      tangent, hence improving the robustness of the solution. The order of accuracy is the same with
+  (8) In a Newton-Raphson scheme, IMPL-EX integration translates to a step-linear solution of the material 
+      non-linearity, and a symmetric, semi-positive definite tangent tensor regardless of what the analytical
+      tangent migh be, hence improving the robustness of the solution. The order of accuracy is the same with
       the implicit (backward) euler integration scheme, however the commited error at a time step is larger.
-      An automatic time-stepping algorithm is employed to a priori control this error. (Oliver et al, 2008)
+      An automatic time-stepping algorithm should be employed in order to a priori control this error. (Oliver et al, 2008)
 
    References:
    Armero, F. and Petocz, E. "A New Dissipative Time-Stepping Algorithm for Frictional
@@ -188,7 +189,7 @@ class ZeroLengthImplexContact : public Element {
         int displaySelf(Renderer&, int mode, float fact, const char** displayModes = 0, int numModes = 0);
         void Print(OPS_Stream& s, int flag = 0);
 
-        Response* setResponse(const char** argv, int argc, Information& eleInformation);
+        Response* setResponse(const char** argv, int argc, OPS_Stream& output);
         int getResponse(int responseID, Information& eleInformation);
         int updateParameter(int parameterID, double value);
 
@@ -198,7 +199,7 @@ class ZeroLengthImplexContact : public Element {
         const Matrix& computeRotMatrix2();                                    
 
         // residual and tangent computation
-        void computeMaterialStuff(bool e_phase, bool t_flag);           // compute contact material response
+        void computeMaterialStuff(bool e_phase, bool t_flag);
        
         // compute local initial gap
         const Vector& computeLocalInitialGap();

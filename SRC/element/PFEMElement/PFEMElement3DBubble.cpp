@@ -295,17 +295,17 @@ int PFEMElement3DBubble::updateMatrix()
         for(int b=0; b<(int)thePCs.size(); ++b) {
 
             // Gt
-            D(numDOFs(2*a+1), numDOFs(2*b)) = G(3*b,a);   // GxT
-            D(numDOFs(2*a+1), numDOFs(2*b)+1) = G(3*b+1,a); // GyT
-            D(numDOFs(2*a+1), numDOFs(2*b)+2) = G(3*b+2,a); // GzT
+            M(numDOFs(2*a+1), numDOFs(2*b)) = G(3*b,a);   // GxT
+            M(numDOFs(2*a+1), numDOFs(2*b)+1) = G(3*b+1,a); // GyT
+            M(numDOFs(2*a+1), numDOFs(2*b)+2) = G(3*b+2,a); // GzT
 
             // G
-            D(numDOFs(2*a), numDOFs(2*b+1)) = -G(3*a,b);   // -Gx
-            D(numDOFs(2*a)+1, numDOFs(2*b+1)) = -G(3*a+1,b); // -Gy
-            D(numDOFs(2*a)+2, numDOFs(2*b+1)) = -G(3*a+2,b); // -Gz
+            M(numDOFs(2*a), numDOFs(2*b+1)) = -G(3*a,b);   // -Gx
+            M(numDOFs(2*a)+1, numDOFs(2*b+1)) = -G(3*a+1,b); // -Gy
+            M(numDOFs(2*a)+2, numDOFs(2*b+1)) = -G(3*a+2,b); // -Gz
 
             // L
-            D(numDOFs(2*a+1), numDOFs(2*b+1)) = L(a,b);   // bubble
+            M(numDOFs(2*a+1), numDOFs(2*b+1)) = L(a,b);   // bubble
         }
     }
 

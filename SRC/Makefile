@@ -474,6 +474,7 @@ ELE_LIBS   =  $(FE)/element/Element.o \
 	$(FE)/element/zeroLength/ZeroLengthContactNTS2D.o \
 	$(FE)/element/zeroLength/ZeroLengthInterface2D.o \
 	$(FE)/element/zeroLength/ZeroLengthRocking.o \
+	$(FE)/element/zeroLength/ZeroLengthImplexContact.o \
 	$(FE)/element/surfaceLoad/SurfaceLoad.o \
 	$(FE)/element/surfaceLoad/TriSurfaceLoad.o \
 	$(FE)/element/UWelements/SimpleContact2D.o \

@@ -263,6 +263,7 @@
 #include <ShellDKGQ.h>   //Added by Lisha Wang, Xinzheng Lu, Linlin Xie, Song Cen & Quan Gu
 #include <ShellNLDKGQ.h> //Added by Lisha Wang, Xinzheng Lu, Linlin Xie, Song Cen & Quan Gu
 #include <ASDShellQ4.h> // Massimo Petracca
+#include <ZeroLengthImplexContact.h> // Onur Deniz Akan (IUSS)
 #include <Brick.h>
 #include <BbarBrick.h>
 #include <Joint2D.h>		// Arash
@@ -758,6 +759,9 @@ FEM_ObjectBrokerAllClasses::getNewElement(int classTag)
     
     case ELE_TAG_ASDShellQ4:   // Massimo Petracca
       return new ASDShellQ4(); // Massimo Petracca
+    
+    case ELE_TAG_ZeroLengthImplexContact:   // Onur Deniz Akan
+      return new ZeroLengthImplexContact(); // Onur Deniz Akan
     
     case ELE_TAG_BbarBrick:
       return new BbarBrick();

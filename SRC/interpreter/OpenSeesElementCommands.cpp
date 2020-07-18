@@ -78,6 +78,7 @@ void* OPS_CorotTrussElement();
 void* OPS_CorotTrussSectionElement();
 void* OPS_ZeroLengthContactNTS2D();
 void* OPS_ZeroLengthInterface2D();
+void* OPS_ZeroLengthImplexContact();
 void* OPS_ComponentElement2d();
 void* OPS_ZeroLengthImpact3D();
 void* OPS_ModElasticBeam2d();
@@ -488,6 +489,7 @@ namespace {
 	functionMap.insert(std::make_pair("zeroLengthContact2D", &OPS_ZeroLengthContact2D));
 	functionMap.insert(std::make_pair("zeroLengthContact3D", &OPS_ZeroLengthContact3D));
 	functionMap.insert(std::make_pair("zeroLengthRocking", &OPS_ZeroLengthRocking));
+	functionMap.insert(std::make_pair("zeroLengthImplexContact", &OPS_ZeroLengthImplexContact));
 	functionMap.insert(std::make_pair("bbarBrickWithSensitivity", &OPS_BbarBrickWithSensitivity));
 	functionMap.insert(std::make_pair("bbarBrick", &OPS_BbarBrick));
 	functionMap.insert(std::make_pair("stdBrick", &OPS_Brick));

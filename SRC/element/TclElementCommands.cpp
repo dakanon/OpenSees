@@ -90,6 +90,7 @@ extern  void *OPS_ElasticTubularJoint(void);
 extern void *OPS_ZeroLengthContactNTS2D(void);
 extern void *OPS_ZeroLengthVG_HG(void);
 extern void *OPS_ZeroLengthInterface2D(void);
+extern void *OPS_ZeroLengthImplexContact(void);   // Onur Deniz Akan (IUSS)
 extern "C" void *OPS_PY_Macro2D(void);
 extern void *OPS_SimpleContact2D(void);
 extern void *OPS_SimpleContact3D(void);
@@ -838,7 +839,17 @@ TclModelBuilderElementCommand(ClientData clientData, Tcl_Interp *interp,
       opserr << "TclElementCommand -- unable to create element of type : " << argv[1] << endln;
       return TCL_ERROR;
     }
+  
+  } else if (strcmp(argv[1],"zeroLengthImplexContact") == 0) {
     
+    void *theEle = OPS_ZeroLengthImplexContact();
+    if (theEle != 0) 
+      theElement = (Element *)theEle;
+    else {
+      opserr << "TclElementCommand -- unable to create element of type : " << argv[1] << endln;
+      return TCL_ERROR;
+    }
+  
   } else if ((strcmp(argv[1],"CoupledZeroLength") == 0) || (strcmp(argv[1],"ZeroLengthCoupled") == 0)) {
     
     void *theEle = OPS_CoupledZeroLength();

@@ -434,23 +434,30 @@ const Matrix & ZeroLengthImplexContact::getMass(void)
 const Vector & ZeroLengthImplexContact::getResistingForce(void) {
 
     auto& gs = getGlobalStorage(numDOF[0] + numDOF[1]);
-    auto& resid = gs.R;
+    auto& R = gs.R;
+
+    // stress vector in local system
     const auto& F = sv.sig;
    
-    // compute global residual in local coord. sys.
-    static Vector FG(3);
-    const Matrix& T1 = computeRotMatrix1();
-    FG.addMatrixTransposeVector(0.0, T1, F, 1.0);
+    // residual vector in local system
+    static Vector RL(6);
+    const Matrix& B = computeB();
+    RL.addMatrixTransposeVector(0.0, B, F, 1.0);
+
+    // residual vector in global system, local DOFset
+    static Vector RG(6);
+    const Matrix& T2 = computeRotMatrix2();
+    RG.addMatrixTransposeVector(0.0, T2, RL, 1.0);
 
     // compute global residual in global DOFset
-    resid.Zero(); // flush R
+    R.Zero();
     int index = numDOF[0];
     for (int i = 0; i < numDIM; i++) {
-        resid(i) = FG(i);
-        resid(i + index) = -1 * FG(i);
+        R(i) = RG(i);
+        R(i + index) = RG(i + 3);
     }
 
-    return resid;
+    return R;
 }
 
 const Vector & ZeroLengthImplexContact::getResistingForceIncInertia(void)
@@ -546,7 +553,6 @@ void ZeroLengthImplexContact::Print(OPS_Stream &strm, int flag) {
 
 Response* ZeroLengthImplexContact::setResponse(const char** argv, int argc, OPS_Stream& output)
 {
-    auto& gs = getGlobalStorage(numDOF[0] + numDOF[1]);
     Response* theResponse = 0;
 
     output.tag("ElementOutput");
@@ -554,6 +560,20 @@ Response* ZeroLengthImplexContact::setResponse(const char** argv, int argc, OPS_
     output.attr("eleTag", this->getTag());
     output.attr("node1", connectedExternalNodes[0]);
     output.attr("node2", connectedExternalNodes[1]);
+
+    auto lam_open_gauss = [&output]() {
+        output.tag("GaussPoint");
+        output.attr("number", 1);
+        output.attr("eta", 0.0);
+
+        output.tag("NdMaterialOutput");
+        output.attr("classType", 0);
+        output.attr("tag", 0);
+    };
+    auto lam_close_gauss = [&output]() {
+        output.endTag(); // GaussPoint
+        output.endTag(); // NdMaterialOutput
+    };
 
     if (numDIM == 2) {
         if (strcmp(argv[0], "force") == 0 || strcmp(argv[0], "forces") == 0) {
@@ -565,26 +585,30 @@ Response* ZeroLengthImplexContact::setResponse(const char** argv, int argc, OPS_
             theResponse = new ElementResponse(this, 1, Vector(4));
         }
         else if (strcmp(argv[0], "displacement") == 0 || strcmp(argv[0], "dispJump") == 0) {
+            lam_open_gauss();
             output.tag("ResponseType", "eps11");
             output.tag("ResponseType", "eps12");
-
+            lam_close_gauss();
             theResponse = new ElementResponse(this, 2, Vector(2));
         }
         else if (strcmp(argv[0], "localForce") == 0 || strcmp(argv[0], "localForces") == 0) {
+            lam_open_gauss();
             output.tag("ResponseType", "Pn");
             output.tag("ResponseType", "Pt1");
-
+            lam_close_gauss();
             theResponse = new ElementResponse(this, 3, Vector(2));
         }
         else if (strcmp(argv[0], "localDisplacement") == 0 || strcmp(argv[0], "localDispJump") == 0) {
+            lam_open_gauss();
             output.tag("ResponseType", "epsn");
             output.tag("ResponseType", "epst1");
-
+            lam_close_gauss();
             theResponse = new ElementResponse(this, 4, Vector(2));
         }
         else if ((strcmp(argv[0], "slip") == 0) || (strcmp(argv[0], "slipMultiplier") == 0)) {
+            lam_open_gauss();
             output.tag("ResponseType", "lambda");
-
+            lam_close_gauss();
             theResponse = new ElementResponse(this, 5, Vector(1));
         }
     }
@@ -600,29 +624,33 @@ Response* ZeroLengthImplexContact::setResponse(const char** argv, int argc, OPS_
             theResponse = new ElementResponse(this, 1, Vector(6));
         }
         else if (strcmp(argv[0], "displacement") == 0 || strcmp(argv[0], "dispJump") == 0) {
+            lam_open_gauss();
             output.tag("ResponseType", "eps11");
             output.tag("ResponseType", "eps12");
             output.tag("ResponseType", "eps13");
-
+            lam_close_gauss();
             theResponse = new ElementResponse(this, 2, Vector(3));
         }
         else if (strcmp(argv[0], "localForce") == 0 || strcmp(argv[0], "localForces") == 0) {
+            lam_open_gauss();
             output.tag("ResponseType", "Pn_1");
             output.tag("ResponseType", "Pt1");
             output.tag("ResponseType", "Pt2");
-
+            lam_close_gauss();
             theResponse = new ElementResponse(this, 3, Vector(3));
         }
         else if (strcmp(argv[0], "localDisplacement") == 0 || strcmp(argv[0], "localDispJump") == 0) {
+            lam_open_gauss();
             output.tag("ResponseType", "epsn");
             output.tag("ResponseType", "epst1");
             output.tag("ResponseType", "epst2");
-
+            lam_close_gauss();
             theResponse = new ElementResponse(this, 4, Vector(3));
         }
         else if ((strcmp(argv[0], "slip") == 0) || (strcmp(argv[0], "slipMultiplier") == 0)) {
+            lam_open_gauss();
             output.tag("ResponseType", "lambda");
-
+            lam_close_gauss();
             theResponse = new ElementResponse(this, 5, Vector(1));
         }
     }
@@ -790,12 +818,8 @@ void ZeroLengthImplexContact::computeStrain(void)
     const Matrix& T2 = computeRotMatrix2();
     UL.addMatrixVector(0.0, T2, UGL, 1.0);
 
-    // compute diplacement jump US(2) - UM(1) (will be called strain) in local coordinates
-    static Matrix B(3, 6);
-    for (int i = 0; i < 3; i++) {
-        B(i, i + 3) = 1;
-        B(i, i) = -1;
-    }
+    // compute B
+    const Matrix& B = computeB();
     sv.eps.addMatrixVector(0.0, B, UL, 1.0);  // displacement jump
 
     // add the initial gap (if any)
@@ -920,58 +944,34 @@ void ZeroLengthImplexContact::updateInternal(bool do_implex, bool do_tangent)
 
 void ZeroLengthImplexContact::computeGenericStiffness(const Matrix& C, Matrix& K)
 {
-    /*
-    // compute local stiffness in local DOFset
-    static Matrix CL(6, 6);
-    for (int i = 0; i < 3; i++)
-    {
-        for (int j = 0; j < 3; j++)
-        {
-            CL(i, j) = C(i, j);
-            CL(i, j + 3) = -1 * C(i, j);
-            CL(i + 3, j) = -1 * C(i, j);
-            CL(i + 3, j + 3) = C(i, j);
-        }
-    }
+    // element stiffness in local system
+    static Matrix KL(6, 6);
+    const Matrix& B = computeB();
+    KL.addMatrixTripleProduct(0.0, B, C, 1.0);
 
-    // compute global stiffness in local DOFset
-    static Matrix CGL(6, 6);
+    // element stiffness in global system, local DOFset
+    static Matrix KG(6, 6);
     const Matrix& T2 = computeRotMatrix2();
-    CGL.addMatrixTripleProduct(0.0, T2, CL, 1.0);
+    KG.addMatrixTripleProduct(0.0, T2, KG, 1.0);
 
-    // compute global stiffness in global DOFset
-    K.Zero(); // flush K
-   int index = numDOF[0];
-    for (int i = 0; i < numDIM; i++)
-    {
-        for (int j = 0; j < numDIM; j++)
-        {
-            K(i, j) = CGL(i, j);
-            K(i, j + index) = CGL(i, j + 3);
-            K(i + index, j) = CGL(i + 3, j);
-            K(i + index, j + index) = CGL(i + 3, j + 3);
-        }
-    }
-
-    */
-    // OR
-
-    // compute global stiffness in local coord. sys.
-    static Matrix CG(3, 3);
-    const Matrix& T1 = computeRotMatrix1();
-    CG.addMatrixTripleProduct(0.0, T1, C, 1.0);
-
-    // compute global stiffness in global DOFset
-    K.Zero(); // flush K
+    // element tangent in global DOFset
+    K.Zero();
     int index = numDOF[0];
-    for (int i = 0; i < numDIM; i++)
-    {
-        for (int j = 0; j < numDIM; j++)
-        {
-            K(i, j) = CG(i, j);
-            K(i, j + index) = -1 * CG(i, j);
-            K(i + index, j) = -1 * CG(i, j);
-            K(i + index, j + index) = CG(i, j);
+    for (int i = 0; i < numDIM; i++) {
+        for (int j = 0; j < numDIM; j++) {
+            K(i, j) = KG(i, j);
+            K(i + index, j + index) = KG(i + 3, j + 3);
         }
     }
+}
+
+const Matrix& ZeroLengthImplexContact::computeB()
+{
+    // compute diplacement jump US(2) - UM(1) (will be called strain) in local coordinates
+    static Matrix B(3, 6);
+    for (int i = 0; i < 3; i++) {
+        B(i, i + 3) = 1;
+        B(i, i) = -1;
+    }
+    return B;
 }

@@ -209,6 +209,8 @@ class ZeroLengthImplexContact : public Element {
         void updateInternal(bool do_implex, bool do_tangent);
         // compute siffness
         void computeGenericStiffness(const Matrix& C, Matrix& K);
+        // compute B matrix
+        const Matrix& computeB();
 
     private:
         // element info

@@ -1284,6 +1284,7 @@ GmshRecorder::setGMSHType()
     gmshtypes[ELE_TAG_FourNodeQuad] = GMSH_QUAD;
     gmshtypes[ELE_TAG_FourNodeQuad3d] = GMSH_QUAD;
     gmshtypes[ELE_TAG_Tri31] = GMSH_TRIANGLE;
+    gmshtypes[ELE_TAG_SixNodeTri] = GMSH_TRIANGLE;
     gmshtypes[ELE_TAG_BeamWithHinges2d] = GMSH_LINE;
     gmshtypes[ELE_TAG_BeamWithHinges3d] = GMSH_LINE;
     gmshtypes[ELE_TAG_EightNodeBrick] = GMSH_HEXAHEDRON;
@@ -1314,6 +1315,8 @@ GmshRecorder::setGMSHType()
     gmshtypes[ELE_TAG_EnhancedQuad] = GMSH_QUAD;
     gmshtypes[ELE_TAG_ConstantPressureVolumeQuad] = GMSH_QUAD;
     gmshtypes[ELE_TAG_NineNodeMixedQuad] = GMSH_POLY_VERTEX;
+    gmshtypes[ELE_TAG_NineNodeQuad] = GMSH_POLY_VERTEX;
+    gmshtypes[ELE_TAG_EightNodeQuad] = GMSH_POLY_VERTEX;
     gmshtypes[ELE_TAG_DispBeamColumn2d] = GMSH_LINE;
     gmshtypes[ELE_TAG_TimoshenkoBeamColumn2d] = GMSH_LINE;
     gmshtypes[ELE_TAG_DispBeamColumn3d] = GMSH_LINE;

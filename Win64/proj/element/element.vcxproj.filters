@@ -206,6 +206,9 @@
     <ClCompile Include="..\..\..\SRC\element\zeroLength\ZeroLengthSection.cpp">
       <Filter>zeroLength</Filter>
     </ClCompile>
+	<ClCompile Include="..\..\..\SRC\element\zeroLength\ZeroLengthImplexContact.cpp">
+      <Filter>zeroLength</Filter>
+    </ClCompile>
     <ClCompile Include="..\..\..\SRC\element\beamWithHinges\TclBeamWithHingesBuilder.cpp">
       <Filter>beamWithHinges</Filter>
     </ClCompile>
@@ -977,6 +980,9 @@
       <Filter>zeroLength</Filter>
     </ClInclude>
     <ClInclude Include="..\..\..\SRC\element\zeroLength\ZeroLengthSection.h">
+      <Filter>zeroLength</Filter>
+    </ClInclude>
+	<ClInclude Include="..\..\..\SRC\element\zeroLength\ZeroLengthImplexContact.h">
       <Filter>zeroLength</Filter>
     </ClInclude>
     <ClInclude Include="..\..\..\SRC\coordTransformation\CorotCrdTransf2d.h">

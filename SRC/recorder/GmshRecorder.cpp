@@ -1277,6 +1277,7 @@ GmshRecorder::setGMSHType()
     gmshtypes[ELE_TAG_ZeroLengthInterface2D] = GMSH_LINE;
     gmshtypes[ELE_TAG_CoupledZeroLength] = GMSH_LINE;
     gmshtypes[ELE_TAG_ZeroLengthRocking] = GMSH_LINE;
+    gmshtypes[ELE_TAG_ZeroLengthImplexContact] = GMSH_LINE;	
     gmshtypes[ELE_TAG_NLBeamColumn2d] = GMSH_LINE;
     gmshtypes[ELE_TAG_NLBeamColumn3d] = GMSH_LINE;
     gmshtypes[ELE_TAG_LargeDispBeamColumn3d] = GMSH_LINE;

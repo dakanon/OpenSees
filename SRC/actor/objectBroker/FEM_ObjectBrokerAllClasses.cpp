@@ -220,6 +220,7 @@
 #include "zeroLength/ZeroLengthContactNTS2D.h"
 #include "zeroLength/ZeroLengthInterface2D.h"
 //#include "ZeroLengthND.h"
+#include "zeroLength/ZeroLengthImplexContact.h"
 
 #include "fourNodeQuad/FourNodeQuad.h"
 #include "fourNodeQuad/EnhancedQuad.h"
@@ -772,6 +773,9 @@ FEM_ObjectBrokerAllClasses::getNewElement(int classTag)
     case ELE_TAG_ASDShellQ4:   // Massimo Petracca
       return new ASDShellQ4(); // Massimo Petracca
     
+    case ELE_TAG_ZeroLengthImplexContact:   // Onur Deniz Akan
+      return new ZeroLengthImplexContact(); // Onur Deniz Akan
+        
     case ELE_TAG_BbarBrick:
       return new BbarBrick();
             

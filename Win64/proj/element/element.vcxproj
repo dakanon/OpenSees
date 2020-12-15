@@ -288,6 +288,7 @@
     <ClCompile Include="..\..\..\SRC\element\zeroLength\ZeroLengthND.cpp" />
     <ClCompile Include="..\..\..\SRC\element\zeroLength\ZeroLengthRocking.cpp" />
     <ClCompile Include="..\..\..\SRC\element\zeroLength\ZeroLengthSection.cpp" />
+    <ClCompile Include="..\..\..\SRC\element\zeroLength\ZeroLengthImplexContact.cpp" />
     <ClCompile Include="..\..\..\SRC\element\beamWithHinges\TclBeamWithHingesBuilder.cpp" />
     <ClCompile Include="..\..\..\SRC\coordTransformation\CorotCrdTransf2d.cpp" />
     <ClCompile Include="..\..\..\SRC\coordTransformation\CorotCrdTransf3d.cpp" />
@@ -552,6 +553,7 @@
     <ClInclude Include="..\..\..\SRC\element\zeroLength\ZeroLengthND.h" />
     <ClInclude Include="..\..\..\SRC\element\zeroLength\ZeroLengthRocking.h" />
     <ClInclude Include="..\..\..\SRC\element\zeroLength\ZeroLengthSection.h" />
+    <ClInclude Include="..\..\..\SRC\element\zeroLength\ZeroLengthImplexContact.h" />
     <ClInclude Include="..\..\..\SRC\coordTransformation\CorotCrdTransf2d.h" />
     <ClInclude Include="..\..\..\SRC\coordTransformation\CorotCrdTransf3d.h" />
     <ClInclude Include="..\..\..\SRC\coordTransformation\CrdTransf.h" />

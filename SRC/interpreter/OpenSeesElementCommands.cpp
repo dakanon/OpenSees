@@ -56,6 +56,7 @@ UPDATES, ENHANCEMENTS, OR MODIFICATIONS.
 #include <Brick.h>
 #include <BbarBrick.h>
 #include <ShellMITC4.h>
+#include <ShellNLDKGQ.h>
 #include <FourNodeTetrahedron.h>
 
 #include <BeamIntegration.h>
@@ -98,12 +99,15 @@ void* OPS_LeadRubberX();
 void* OPS_ElastomericX();
 void* OPS_MVLEM();
 void* OPS_SFI_MVLEM();
+void* OPS_MVLEM_3D();
+void* OPS_SFI_MVLEM_3D();
 void* OPS_MultiFP2d();
 void* OPS_ShellMITC4();
 void* OPS_ShellMITC9();
 void* OPS_ShellDKGQ();
 void* OPS_ShellDKGT();
 void* OPS_ShellNLDKGQ();
+void* OPS_ShellNLDKGT();
 void* OPS_ASDShellQ4();
 void* OPS_ZeroLengthImplexContact();
 void* OPS_CoupledZeroLength();
@@ -218,6 +222,7 @@ void* OPS_FourNodeTetrahedron();
 void* OPS_CatenaryCableElement();
 void* OPS_GradientInelasticBeamColumn2d();
 void* OPS_GradientInelasticBeamColumn3d();
+void* OPS_RockingBC();
 
 namespace {
 
@@ -615,6 +620,8 @@ namespace {
 	functionMap.insert(std::make_pair("ElastomericX", &OPS_ElastomericX));
 	functionMap.insert(std::make_pair("MVLEM", &OPS_MVLEM));
 	functionMap.insert(std::make_pair("SFI_MVLEM", &OPS_SFI_MVLEM));
+	functionMap.insert(std::make_pair("MVLEM_3D", &OPS_MVLEM_3D));
+	functionMap.insert(std::make_pair("SFI_MVLEM_3D", &OPS_SFI_MVLEM_3D));
 	functionMap.insert(std::make_pair("MultiFP2d", &OPS_MultiFP2d));
 	functionMap.insert(std::make_pair("shell", &OPS_ShellMITC4));
 	functionMap.insert(std::make_pair("Shell", &OPS_ShellMITC4));
@@ -630,6 +637,8 @@ namespace {
 	functionMap.insert(std::make_pair("ShellDKGT", &OPS_ShellDKGT));
 	functionMap.insert(std::make_pair("ShellNLDKGQ", &OPS_ShellNLDKGQ));
 	functionMap.insert(std::make_pair("shellNLDKGQ", &OPS_ShellNLDKGQ));
+	functionMap.insert(std::make_pair("ShellNLDKGT", &OPS_ShellNLDKGT));
+	functionMap.insert(std::make_pair("shellNLDKGT", &OPS_ShellNLDKGT));	
 	functionMap.insert(std::make_pair("ASDShellQ4", &OPS_ASDShellQ4));
 	functionMap.insert(std::make_pair("zeroLengthImplexContact", &OPS_ZeroLengthImplexContact));
 	functionMap.insert(std::make_pair("CoupledZeroLength", &OPS_CoupledZeroLength));
@@ -668,6 +677,7 @@ namespace {
 	functionMap.insert(std::make_pair("FourNodeTetrahedron", &OPS_FourNodeTetrahedron));
 	functionMap.insert(std::make_pair("CatenaryCable", &OPS_CatenaryCableElement));
 	functionMap.insert(std::make_pair("gradientInelasticBeamColumn", &OPS_GradientInelasticBeamColumn));
+	functionMap.insert(std::make_pair("RockingBC", &OPS_RockingBC));
 
 	return 0;
     }
@@ -784,6 +794,20 @@ int OPS_doBlock2D()
 	}
 	cArg = 7;
 
+	
+    } else if (strcmp(type, "ShellNLDKGQ") == 0 || strcmp(type, "shellNLDKGQ") == 0) {
+	if (OPS_GetNumRemainingInputArgs() < 1) {
+	    opserr<<"WARNING: want - secTag\n";
+	    return -1;
+	}
+	int numdata = 1;
+	if (OPS_GetIntInput(&numdata, &secTag) < 0) {
+	    opserr << "WARNING invalid secTag\n";
+	    return -1;
+	}
+	cArg = 7;
+		
+		
     } else if (strcmp(type, "bbarQuad") == 0 || strcmp(type,"mixedQuad") == 0) {
 	if (OPS_GetNumRemainingInputArgs() < 2) {
 	    opserr<<"WARNING: want - thick, matTag\n";
@@ -991,6 +1015,28 @@ int OPS_doBlock2D()
 		theEle = new ShellMITC4(eleID,nd1,nd2,nd3,nd4,*sec);
 
 
+			
+	    } else if (strcmp(type, "ShellNLDKGQ") == 0 || strcmp(type, "shellNLDKGQ") == 0) {
+
+		if (numEleNodes != 4) {
+		    opserr<<"WARNING ShellNLDKGQ element only needs four nodes\n";
+		    return -1;
+		}
+		SectionForceDeformation *sec = OPS_getSectionForceDeformation(secTag);
+
+		if (sec == 0) {
+		    opserr << "WARNING:  section " << secTag << " not found\n";
+		    return -1;
+		}
+
+		int nd1 = nodeTags(0) + idata[2];
+		int nd2 = nodeTags(1) + idata[2];
+		int nd3 = nodeTags(2) + idata[2];
+		int nd4 = nodeTags(3) + idata[2];
+		theEle = new ShellNLDKGQ(eleID,nd1,nd2,nd3,nd4,*sec);
+
+		
+			
 	    } else if (strcmp(type, "bbarQuad") == 0 || strcmp(type,"mixedQuad") == 0) {
 
 		if (numEleNodes != 4) {

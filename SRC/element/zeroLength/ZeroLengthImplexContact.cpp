@@ -823,9 +823,8 @@ void ZeroLengthImplexContact::computeStrain(void)
 void ZeroLengthImplexContact::updateInternal(bool do_implex, bool do_tangent)
 {
     Vector ST(2);                   // trial tangent stress
-    Vector dir(2);                  // slip direction vector
-    //double dlambda = 0.0;           // slip multiplier
-    double slip_function = 0.0;      // slip function
+    Vector slip_dir(2);             // slip direction vector
+    double slip_function = 0.0;     // slip function
     double tau_y = 0.0;             // yield friciton strength
     sv.C.Zero();                    // initialize the tangent
 
@@ -879,6 +878,7 @@ void ZeroLengthImplexContact::updateInternal(bool do_implex, bool do_tangent)
     // compute trial friction stress
     ST(0) = sv.sig_commit(1) + Kfriction * sv.deps(1);
     ST(1) = sv.sig_commit(2) + Kfriction * sv.deps(2);
+    slip_dir = ST.Normalize();
     if (do_implex && use_implex) { // explicit phase
         // explicit extrapolation
         sv.alpha = sv.alpha_commit + time_factor * (sv.alpha_commit - sv.alpha_commit_old);
@@ -923,8 +923,8 @@ void ZeroLengthImplexContact::updateInternal(bool do_implex, bool do_tangent)
         else { // implicit
             if (sv.beta <= 0.0) { // if contact
                 if (!sv.initial) {
-                    sv.C(1, 0) = mu * Knormal * utils::sign(ST(0)) * utils::sign(sv.sig(0));
-                    sv.C(2, 0) = mu * Knormal * utils::sign(ST(1)) * utils::sign(sv.sig(0));
+                    sv.C(1, 0) = mu * Knormal * slip_dir(0) * utils::sign(sv.sig(0));
+                    sv.C(2, 0) = mu * Knormal * slip_dir(1) * utils::sign(sv.sig(0));
                 }
                 if (slip_function > 0.0) {                                   //slip
                     sv.C(1, 1) = sv.C(2, 2) = 0.0;

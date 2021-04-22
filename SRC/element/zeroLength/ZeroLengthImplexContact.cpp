@@ -17,31 +17,20 @@
 **   Filip C. Filippou (filippou@ce.berkeley.edu)                     **
 **                                                                    **
 ** ****************************************************************** */
-                                                                        
+
 // $Source: /usr/local/cvs/OpenSees/SRC/element/zeroLength/ZeroLengthImplexContact.cpp,v $
 // $Revision: 1.0 $
-// $Date: 2020-XX-XX XX:XX:XX $
-                                                                        
+// $Date: 2020-May $
+
 // Written: Onur Deniz Akan         (onur.akan@iusspavia.it)
-//          Dr. Massimo Petracca    (m.petracca@asdea.net)
-//          Prof. Guido Camata      (g.camata@unich.it)
+//          Dr. Massimo Petracca    
+//          Prof. Guido Camata      
+//          Prof. Enrico Spacone
+//          Prof. Carlo G. Lai
 //
 // Created: May 2020
 //
 // Description: This file contains the implementation for the ZeroLengthImplexContact class.
-
-/*
-TO DISCUSS:
-
---> Store and calculate once the transformation matrix 1 or 1 and 2 at every step. (used 3 times in a step at least)
-
---> No need for 6-by-6 transformation matrix
-
---> Move computation of the initial gap to setDomain
-
---> In GlobalStorage, how does the integer "size" is getting updated? 
-
-*/
 
 #include "ZeroLengthImplexContact.h"
 #include <Information.h>
@@ -61,39 +50,39 @@ TO DISCUSS:
 #include <elementAPI.h>
 #include <map>
 
-namespace 
+namespace
 {
-     class GlobalStorage
-     {
-     public:
-         int size = 0;
-         Matrix K; // stiffness
-         Matrix K0; // initial stiffness
-         Matrix M; // mass 
-         Matrix D; // damping
-         Vector U; // displacement
-         Vector R; // residual
+    class GlobalStorage
+    {
+    public:
+        int size = 0;
+        Matrix K; // stiffness
+        Matrix K0; // initial stiffness
+        Matrix M; // mass 
+        Matrix D; // damping
+        Vector U; // displacement
+        Vector R; // residual
 
-     public:
-         GlobalStorage() = default;
-         GlobalStorage& resize(int N) {
-             if (N != size) {
-                 K.resize(N, N);
-                 K0.resize(N, N);
-                 M.resize(N, N);
-                 D.resize(N, N);
-                 U.resize(N);
-                 R.resize(N);
-             }
-             return *this;
-         }
-     };
+    public:
+        GlobalStorage() = default;
+        GlobalStorage& resize(int N) {
+            if (N != size) {
+                K.resize(N, N);
+                K0.resize(N, N);
+                M.resize(N, N);
+                D.resize(N, N);
+                U.resize(N);
+                R.resize(N);
+            }
+            return *this;
+        }
+    };
 
-     static GlobalStorage& getGlobalStorage(int N)
-     {
-         static std::map<int, GlobalStorage> gsmap;
-         return gsmap[N].resize(N);
-     }
+    static GlobalStorage& getGlobalStorage(int N)
+    {
+        static std::map<int, GlobalStorage> gsmap;
+        return gsmap[N].resize(N);
+    }
 }
 
 namespace utils {
@@ -135,7 +124,7 @@ void* OPS_ZeroLengthImplexContact(void) {
     // some kudos
     static int counter = 0;
     if (++counter == 1)
-        opserr << "ZeroLengthImplexContact element - Written: O.D.Akan (IUSS), M.Petracca (ASDEA), G.Camata (UNICH)\n";
+        opserr << "ZeroLengthImplexContact element - Implemented: Akan, OD., Petracca, M., Camata, G., Spacone, E. & Lai, CG. (2020)\n";
 
     // model dimension
     int ndm = OPS_GetNDM();
@@ -160,9 +149,9 @@ void* OPS_ZeroLengthImplexContact(void) {
         return theElement;
     }
 
-    // read Kn, Kt, mu, C
-    double ddata[4];
-    numdata = 4;
+    // read Kn, Kt, mu
+    double ddata[3];
+    numdata = 3;
     if (OPS_GetDoubleInput(&numdata, ddata) < 0) {
         opserr << "ZeroLengthImplexContact: WARNING: invalid double inputs\n";
         return theElement;
@@ -211,41 +200,40 @@ void* OPS_ZeroLengthImplexContact(void) {
     }
     // input reading stage is complete
 
-    // check integration type and revert back to implicit if neither 1 or 0
+    // check integration type and pick implicit if neither 1 or 0
     if (integrationType != 1 && integrationType != 0) {
         opserr << "ZeroLengthImplexContact: WARNING: type of integration is set to IMPLICIT due to invalid flag\n";
-        integrationType = 0;
+        integrationType = false;
     }
     // check the normal vector and normalize
     if (x_e.Norm() < SmallNumber) {
         opserr << "ZeroLengthImplexContact: WARNING: normal vector is NOT valid!: -orient $x1 $x2 $x3 cannot be < 0, 0, 0 >\n";
         return theElement;
     }
-    x_e.Normalize();   // crucial step for the computaion of geom. transformation matix: method computeRotMatrix()
+    x_e.Normalize();   // crucial step for the computation of geometric transformation matix: method computeRotMatrix()
 
     // finally, create the element
     theElement = new ZeroLengthImplexContact(idata[0], idata[1], idata[2], ddata[0], ddata[1],
-        ddata[2], ddata[3], ndm, integrationType, x_e[0], x_e[1], x_e[2]);
+        ddata[2], ndm, integrationType, x_e[0], x_e[1], x_e[2]);
 
     if (theElement == 0) {
         opserr << "WARNING: out of memory: element zeroLengthImplexContact " << idata[0] <<
-            " iNode? jNode? Kn? Kt? mu? C? <-orient $x1 $x2 $x3> <-intType type?>\n";
+            " iNode? jNode? Kn? Kt? mu? <-orient $x1 $x2 $x3> <-intType type?>\n";
     }
 
     return theElement;
 }
 
 ZeroLengthImplexContact::ZeroLengthImplexContact(int tag, int Nd1, int Nd2,
-    double Kn, double Kt, double fcoeff, double C,
+    double Kn, double Kt, double fcoeff,
     int ndm, bool itype, double xN, double yN, double zN)
     : Element(tag, ELE_TAG_ZeroLengthImplexContact)
     , connectedExternalNodes(2)
     , Knormal(Kn)
     , Kfriction(Kt)
     , mu(fcoeff)
-    , cohesion(C)
     , numDIM(ndm)
-    , doImplEx(itype)
+    , use_implex(itype)
 {
     connectedExternalNodes(0) = Nd1;
     connectedExternalNodes(1) = Nd2;
@@ -283,7 +271,7 @@ int ZeroLengthImplexContact::getNumDOF(void)
     return numDOF[0] + numDOF[1];
 }
 
-void ZeroLengthImplexContact::setDomain(Domain *theDomain)
+void ZeroLengthImplexContact::setDomain(Domain* theDomain)
 {
     // check Domain is not null - invoked when object removed from a domain
     if (theDomain == 0) {
@@ -300,7 +288,7 @@ void ZeroLengthImplexContact::setDomain(Domain *theDomain)
 
     // if can't find both - send a warning message
     if ((theNodes[0] == nullptr) || (theNodes[1] == nullptr)) {
-        opserr << 
+        opserr <<
             "FATAL ERROR ZeroLengthImplexContact::setDomain() - Nd1: " << Nd1 <<
             " and/or Nd2: " << Nd2 << " do not exist in the model.\n";
         exit(-1);
@@ -316,8 +304,8 @@ void ZeroLengthImplexContact::setDomain(Domain *theDomain)
             int idof = numDOF[i];
             if (idof < 2 || idof > 3) {
                 opserr <<
-                    "FATAL ERROR ZeroLengthImplexContact::setDomain() - #DOFs (" 
-                    << idof << ") at node " << i + 1 
+                    "FATAL ERROR ZeroLengthImplexContact::setDomain() - #DOFs ("
+                    << idof << ") at node " << i + 1
                     << " is not supported! it can be either 2 or 3\n";
                 exit(-1);
             }
@@ -340,49 +328,49 @@ void ZeroLengthImplexContact::setDomain(Domain *theDomain)
     DomainComponent::setDomain(theDomain);
 }
 
-int ZeroLengthImplexContact::commitState(void) 
+int ZeroLengthImplexContact::commitState(void)
 {
     // do the implicit correction if impl-ex
-    if (doImplEx) {
+    if (use_implex) {
         // get trial strain tensor at integration point in local crd. sys.
         computeStrain();
         // update material internal variables
-        computeMaterialStuff(false, false);  // explicit_phase?, do_tangent?
+        updateInternal(false, false);  // explicit_phase?, do_tangent?
     }
     // store previously committed variables [step (n-1) --> (n)]
     sv.beta_commit_old = sv.beta_commit;
-    sv.lambda_commit_old = sv.lambda_commit;
+    sv.dlambda_commit_old = sv.dlambda_commit;
     // store converged material state variables [step (n) --> (n+1)]
     sv.eps_commit = sv.eps;
     sv.sig_commit = sv.sig;
     sv.beta_commit = sv.beta;
-    sv.lambda_commit = sv.lambda;
+    sv.dlambda_commit = sv.lambda;
     sv.dtime_n_commit = sv.dtime_n;
     // done
     return 0;
 }
 
-int ZeroLengthImplexContact::revertToLastCommit(void) 
+int ZeroLengthImplexContact::revertToLastCommit(void)
 {
     // restore converged values [step (n+1) --> (n)]
     sv.eps = sv.eps_commit;
     sv.sig = sv.sig_commit;
     sv.beta = sv.beta_commit;
-    sv.lambda = sv.lambda_commit;
+    sv.lambda = sv.dlambda_commit;
     sv.dtime_n = sv.dtime_n_commit;
     // restore converged values [step (n) --> (n-1)]
     sv.beta_commit = sv.beta_commit_old;
-    sv.lambda_commit = sv.lambda_commit_old;
+    sv.dlambda_commit = sv.dlambda_commit_old;
     //done
-	return 0;
+    return 0;
 }
 
-int ZeroLengthImplexContact::revertToStart(void) 
-{   
+int ZeroLengthImplexContact::revertToStart(void)
+{
     // reset state variables
     sv = StateVariables();
     // done
-	return 0;
+    return 0;
 }
 
 int ZeroLengthImplexContact::update(void)
@@ -392,33 +380,38 @@ int ZeroLengthImplexContact::update(void)
     return 0;
 }
 
-const Matrix & ZeroLengthImplexContact::getTangentStiff(void)
+const Matrix& ZeroLengthImplexContact::getTangentStiff(void)
 {
     auto& gs = getGlobalStorage(numDOF[0] + numDOF[1]);
     auto& stiff = gs.K;
     const auto& C = sv.C;
-    computeGenericStiffness(C, stiff);
+    formStiffnessMatrix(C, stiff);
     return stiff;
 }
 
-const Matrix & ZeroLengthImplexContact::getInitialStiff(void) 
+const Matrix& ZeroLengthImplexContact::getInitialStiff(void)
 {
     auto& gs = getGlobalStorage(numDOF[0] + numDOF[1]);
     auto& stiff = gs.K0;
-
     static Matrix C0(3, 3);
+
     C0.Zero();
-    const Vector& LGap = computeLocalInitialGap();
-    double Un = LGap(0);
-    if (Un <= LENTOL) {
-        C0(0, 0) = Knormal;
-        C0(1, 1) = C0(2, 2) = Kfriction;
+    const Vector& LGap = getInitialGap();
+    double Un = LGap(0); // gap parallel to normal vector
+    if (use_implex) { // implex
+        C0 = sv.C; // send tangent instead
     }
-    computeGenericStiffness(C0, stiff);
+    else { // implicit
+        if (Un <= LENTOL) { // send elastic stiffness, if contact
+            C0(0, 0) = Knormal;
+            C0(1, 1) = C0(2, 2) = Kfriction;
+        }
+    }
+    formStiffnessMatrix(C0, stiff);
     return stiff;
 }
 
-const Matrix & ZeroLengthImplexContact::getDamp(void)
+const Matrix& ZeroLengthImplexContact::getDamp(void)
 {
     // get global storage for gloabl DOFset
     auto& gs = getGlobalStorage(numDOF[0] + numDOF[1]);
@@ -426,7 +419,7 @@ const Matrix & ZeroLengthImplexContact::getDamp(void)
     return gs.D;
 }
 
-const Matrix & ZeroLengthImplexContact::getMass(void)
+const Matrix& ZeroLengthImplexContact::getMass(void)
 {
     // get global storage for global DOFset
     auto& gs = getGlobalStorage(numDOF[0] + numDOF[1]);
@@ -434,22 +427,22 @@ const Matrix & ZeroLengthImplexContact::getMass(void)
     return gs.M;
 }
 
-const Vector & ZeroLengthImplexContact::getResistingForce(void) {
+const Vector& ZeroLengthImplexContact::getResistingForce(void) {
 
     auto& gs = getGlobalStorage(numDOF[0] + numDOF[1]);
     auto& R = gs.R;
 
-    // stress vector in local system
+    // stress vector in local coordinate system & local dof-set
     const auto& F = sv.sig;
-   
-    // residual vector in local system
+
+    // residual vector in local coordinate system & global dof-set
     static Vector RL(6);
-    const Matrix& B = computeB();
+    const Matrix& B = theBMatrix();
     RL.addMatrixTransposeVector(0.0, B, F, 1.0);
 
     // residual vector in global system, local DOFset
     static Vector RG(6);
-    const Matrix& T2 = computeRotMatrix2();
+    const Matrix& T2 = getRotationMatrix66();
     RG.addMatrixTransposeVector(0.0, T2, RL, 1.0);
 
     // compute global residual in global DOFset
@@ -459,31 +452,29 @@ const Vector & ZeroLengthImplexContact::getResistingForce(void) {
         R(i) = RG(i);
         R(i + index) = RG(i + 3);
     }
-
     return R;
 }
 
-const Vector & ZeroLengthImplexContact::getResistingForceIncInertia(void)
+const Vector& ZeroLengthImplexContact::getResistingForceIncInertia(void)
 {
     return getResistingForce();
 }
 
-int ZeroLengthImplexContact::sendSelf(int commitTag, Channel &theChannel) {
+int ZeroLengthImplexContact::sendSelf(int commitTag, Channel& theChannel) {
 
     int res = 0;
     int dataTag = this->getDbTag();
-    static Vector data(11);
-    data(0)  = this->getTag();
-    data(1)  = Knormal;
-    data(2)  = Kfriction;
-    data(3)  = mu;
-    data(4)  = cohesion;
-    data(5)  = doImplEx;
-    data(6)  = Xorient(0);
-    data(7)  = Xorient(1);
-    data(8)  = Xorient(2);
-    data(9)  = numDIM;
-    data(10) = numDOF[0];
+    static Vector data(10);
+    data(0) = this->getTag();
+    data(1) = Knormal;
+    data(2) = Kfriction;
+    data(3) = mu;
+    data(4) = use_implex;
+    data(5) = Xorient(0);
+    data(6) = Xorient(1);
+    data(7) = Xorient(2);
+    data(8) = numDIM;
+    data(9) = numDOF[0];
 
     res = theChannel.sendVector(dataTag, commitTag, data);
     if (res < 0) {
@@ -495,30 +486,29 @@ int ZeroLengthImplexContact::sendSelf(int commitTag, Channel &theChannel) {
         opserr << "WARNING ZeroLengthImplexContact::sendSelf() - " << this->getTag() << " failed to send ID\n";
         return -1;
     }
-	return 0;
+    return 0;
 }
 
-int ZeroLengthImplexContact::recvSelf(int commitTag, Channel &theChannel, FEM_ObjectBroker &theBroker) {
+int ZeroLengthImplexContact::recvSelf(int commitTag, Channel& theChannel, FEM_ObjectBroker& theBroker) {
 
     int res;
     int dataTag = this->getDbTag();
-    static Vector data(11);
+    static Vector data(10);
     res = theChannel.recvVector(dataTag, commitTag, data);
     if (res < 0) {
         opserr << "WARNING ZeroLengthImplexContact::recvSelf() - failed to receive Vector\n";
         return -1;
     }
     this->setTag((int)data(0));
-    Knormal         = data(1);
-    Kfriction        = data(2);
-    mu              = data(3);
-    cohesion        = data(4);
-    doImplEx        = (bool)data(5);
-    Xorient(0)      = data(6);
-    Xorient(1)      = data(7);
-    Xorient(2)      = data(8);
-    numDIM          = (int)data(9);
-    numDOF[0]       = (int)data(10);
+    Knormal = data(1);
+    Kfriction = data(2);
+    mu = data(3);
+    use_implex = (bool)data(4);
+    Xorient(0) = data(5);
+    Xorient(1) = data(6);
+    Xorient(2) = data(7);
+    numDIM = (int)data(8);
+    numDOF[0] = (int)data(9);
 
     res = theChannel.recvID(dataTag, commitTag, connectedExternalNodes);
     if (res < 0) {
@@ -528,7 +518,7 @@ int ZeroLengthImplexContact::recvSelf(int commitTag, Channel &theChannel, FEM_Ob
     return 0;
 }
 
-int ZeroLengthImplexContact::displaySelf(Renderer &theViewer, int displayMode, float fact, const char **modes, int numMode)
+int ZeroLengthImplexContact::displaySelf(Renderer& theViewer, int displayMode, float fact, const char** modes, int numMode)
 {
     if (theNodes[0] == 0 || theNodes[1] == 0)
         return 0;
@@ -542,16 +532,16 @@ int ZeroLengthImplexContact::displaySelf(Renderer &theViewer, int displayMode, f
     return theViewer.drawPoint(v1, d1, 10);
 }
 
-void ZeroLengthImplexContact::Print(OPS_Stream &strm, int flag) {
+void ZeroLengthImplexContact::Print(OPS_Stream& strm, int flag) {
 
     if (flag == 0) {                                                                                    // print everything
         strm << "Element: " << this->getTag();
         strm << " type: ZeroLengthImplexContact  iNode: " << connectedExternalNodes(0);
         strm << " jNode: " << connectedExternalNodes(1) << endln;
-    } 
+    }
     else if (flag == 1) {
         strm << this->getTag() << endln;
-    } 
+    }
 }
 
 Response* ZeroLengthImplexContact::setResponse(const char** argv, int argc, OPS_Stream& output)
@@ -666,7 +656,7 @@ int ZeroLengthImplexContact::getResponse(int responseID, Information& eleInfo) {
 
     auto& gs = getGlobalStorage(numDOF[0] + numDOF[1]);
     static Vector small(numDIM);
-    static Vector large(2*numDIM);
+    static Vector large(2 * numDIM);
 
     if (responseID == 1) {
         // global contact forces
@@ -681,7 +671,7 @@ int ZeroLengthImplexContact::getResponse(int responseID, Information& eleInfo) {
     }
     else if (responseID == 2) {
         // global displacement jump
-        const Matrix& T1 = computeRotMatrix1();
+        const Matrix& T1 = getRotationMatrix33();
         static Vector EPS(3);
         EPS.addMatrixTransposeVector(0.0, T1, sv.eps, 1.0);
         for (int i = 0; i < numDIM; i++) {
@@ -737,7 +727,7 @@ int ZeroLengthImplexContact::updateParameter(int parameterID, double value)
     return 0;
 }
 
-const Matrix& ZeroLengthImplexContact::computeRotMatrix1(void)
+const Matrix& ZeroLengthImplexContact::getRotationMatrix33(void)
 {
     static Matrix T(3, 3);
 
@@ -771,12 +761,12 @@ const Matrix& ZeroLengthImplexContact::computeRotMatrix1(void)
     return T;
 }
 
-const Matrix& ZeroLengthImplexContact::computeRotMatrix2(void)
+const Matrix& ZeroLengthImplexContact::getRotationMatrix66(void)
 {
     static Matrix T2(6, 6);
     T2.Zero();
 
-    const Matrix& T1 = computeRotMatrix1();
+    const Matrix& T1 = getRotationMatrix33();
 
     for (int q = 0; q < 2; ++q) {
         int index = q * 3;
@@ -788,26 +778,26 @@ const Matrix& ZeroLengthImplexContact::computeRotMatrix2(void)
     return T2;
 }
 
-const Vector& ZeroLengthImplexContact::computeLocalInitialGap(void)
+const Vector& ZeroLengthImplexContact::getInitialGap(void)
 {
-    const Vector& PM = theNodes[0]->getCrds();
-    const Vector& PS = theNodes[1]->getCrds();
-    static Vector GGap(3);
+    const Vector& PM = theNodes[0]->getCrds(); //master
+    const Vector& PS = theNodes[1]->getCrds(); //slave
+    static Vector GGap(3); // Global gap vector
     GGap.Zero();
     for (int i = 0; i < numDIM; ++i)
-        GGap(i) = PS(i) - PM(i);
+        GGap(i) = PS(i) - PM(i); // + -> no contact! (slave - master)
     // make it local
     static Vector LGap(3);
-    const Matrix& T1 = computeRotMatrix1();
-    LGap.addMatrixVector(0.0, T1, GGap, 1.0);
+    const Matrix& T1 = getRotationMatrix33();
+    LGap.addMatrixVector(0.0, T1, GGap, 1.0); // Local gap vector
     return LGap;
 }
 
 void ZeroLengthImplexContact::computeStrain(void)
 {
     // get global displacement for global DOFset
-    const Vector& UgM = theNodes[0]->getTrialDisp();
-    const Vector& UgS = theNodes[1]->getTrialDisp();
+    const Vector& UgM = theNodes[0]->getTrialDisp(); //master
+    const Vector& UgS = theNodes[1]->getTrialDisp(); //slave
 
     // set global displacement for local DOFset 
     static Vector UGL(6);
@@ -818,33 +808,37 @@ void ZeroLengthImplexContact::computeStrain(void)
 
     // compute local displacement for local DOFset
     static Vector UL(6);
-    const Matrix& T2 = computeRotMatrix2();
+    const Matrix& T2 = getRotationMatrix66();
     UL.addMatrixVector(0.0, T2, UGL, 1.0);
 
     // compute B
-    const Matrix& B = computeB();
+    const Matrix& B = theBMatrix();
     sv.eps.addMatrixVector(0.0, B, UL, 1.0);  // displacement jump
 
-    // add the initial gap (if any)
-    const Vector& LGap = computeLocalInitialGap();
+    // add the initial gap
+    const Vector& LGap = getInitialGap();
     sv.eps.addVector(1.0, LGap, 1.0);
 }
 
-void ZeroLengthImplexContact::computeMaterialStuff(bool e_phase, bool t_flag) {
-
+void ZeroLengthImplexContact::updateInternal(bool do_implex, bool do_tangent)
+{
     Vector ST(2);                   // trial tangent stress
-    Vector dir(2);                  // slip direction
-    double dlambda = 0.0;           // slip multiplier
-    double slipfunction = 0.0;      // slip function
+    Vector dir(2);                  // slip direction vector
+    //double dlambda = 0.0;           // slip multiplier
+    double slip_function = 0.0;      // slip function
+    double tau_y = 0.0;             // yield friciton strength
+    sv.C.Zero();                    // initialize the tangent
 
     // get committed values
     sv.sig = sv.sig_commit;
     sv.beta = sv.beta_commit;
-    sv.lambda = sv.lambda_commit;
+    sv.dlambda = sv.dlambda_commit;
+    // compute strain increment
+    sv.deps = sv.eps - sv.eps_commit;
 
     // time factor for explicit extrapolation
     double time_factor = 1.0;
-    if (e_phase && doImplEx && (sv.dtime_n_commit > 0.0))
+    if (do_implex && use_implex && (sv.dtime_n_commit > 0.0))
         time_factor = sv.dtime_n / sv.dtime_n_commit;
     // note: the implex method just wants the ratio of the new to the old time step
     // not the real time step, so it is just fine to assume it to 1.
@@ -852,110 +846,105 @@ void ZeroLengthImplexContact::computeMaterialStuff(bool e_phase, bool t_flag) {
     // being the load multiplier in continuation methods...
     time_factor = 1.0;
 
-    // compute strain increment
-    sv.deps = sv.eps - sv.eps_commit;
+
+
 
     // Contact Model
-        // update beta
-    if (e_phase && doImplEx) {
+    if (do_implex && use_implex) { // explicit phase
         // explicit extrapolation
-    //sv.beta = sv.beta_commit + time_factor * (sv.beta_commit - sv.beta_commit_old);
+        //sv.beta = sv.beta_commit + time_factor * (sv.beta_commit - sv.beta_commit_old);
         sv.beta = sv.beta_commit;
+        // compute contact stiffness
+        if (sv.beta <= 0.0) { // if contact
+            // fill-in initial stiffness
+            sv.C(0, 0) = Knormal;
+        }
     }
-    else {
-        // implicit
+    else {  // implicit
+        // update internal variables
         sv.beta = sv.beta_commit + sv.deps(0);
-    }
-    // compute contact stiffness
-        // flush the old tangent
-    sv.C.Zero();
-    if (sv.beta <= 0.0) {
-        // fill-in initial stiffness
-        sv.C(0, 0) = Knormal;
-        sv.C(1, 1) = Kfriction;
-        sv.C(2, 2) = Kfriction;
+        if (sv.eps(0) <= 0.0) {  // if contact
+            // fill-in initial stiffness
+            sv.C(0, 0) = Knormal;
+            sv.C(1, 1) = sv.C(2, 2) = Kfriction;
+        }
     }
     // update normal stress
     sv.sig(0) = sv.C(0, 0) * sv.eps(0);
+    
+
+
 
     // Friction Model
-        // compute trial friction stress
+    // compute trial friction stress
     ST(0) = sv.sig_commit(1) + Kfriction * sv.deps(1);
     ST(1) = sv.sig_commit(2) + Kfriction * sv.deps(2);
-    // compute stresses
-    if (e_phase && doImplEx) {
+    if (do_implex && use_implex) { // explicit phase
         // explicit extrapolation
-        sv.lambda = sv.lambda_commit + time_factor * (sv.lambda_commit - sv.lambda_commit_old);
-        // compute slip multiplier
-        dlambda = std::max(0.0, (sv.lambda - sv.lambda_commit));
+        sv.alpha = sv.alpha_commit + time_factor * (sv.alpha_commit - sv.alpha_commit_old);
+        sv.dlambda = std::max(0.0, (sv.alpha - sv.alpha_commit));
         // update stresses
-        sv.sig(1) = ST(0) / (1 + Kfriction * dlambda);
-        sv.sig(2) = ST(1) / (1 + Kfriction * dlambda);
+        sv.sig(1) = ST(0) / (1 + Kfriction * sv.dlambda);
+        sv.sig(2) = ST(1) / (1 + Kfriction * sv.dlambda);
     }
-    else {
-        // compute shear strength
-        double tau_y = cohesion - sv.sig(0) * mu;               // m-c yield surface (sigma_n is negative)
-            // on tau12 - tau13 plane...
-        double normST = ST.Norm();                     // magnitude of friction stress
-        slipfunction = normST - tau_y;                          // compute slip function
-        if (slipfunction < 0.0) {                               // stick
-            // compute slip multipler
-            dlambda = 0.0;
+    else { // implicit
+        // compute friction strength
+        double tau_y = fabs(sv.sig(0)) * mu;         // m-c yield surface (sigma_n is negative)
+        // compute slip function
+        slip_function = ST.Norm() - tau_y;                      // on tau12 - tau13 plane...
+        if (slip_function <= 0.0) {                              // stick
+            // compute slip multiplier
+            sv.dlambda = 0.0;
             // update stresses
             sv.sig(1) = ST(0);
             sv.sig(2) = ST(1);
         }
         else {                                                  //slip
             // compute slip multipler
-            sv.lambda = slipfunction / (Kfriction * tau_y);
-            dlambda = sv.lambda - sv.lambda_commit;
-            // update stresses
-            dir = ST; dir.Normalize();               // slip direction                     
-            sv.sig(1) = tau_y * dir(0);
-            sv.sig(2) = tau_y * dir(1);
+            sv.dlambda = slip_function / (Kfriction * tau_y);
+            sv.sig(1) = ST(0) / (1 + Kfriction * sv.dlambda);
+            sv.sig(2) = ST(1) / (1 + Kfriction * sv.dlambda);
+
         }
-        // update slip multiplier
-        sv.lambda = sv.lambda_commit + dlambda;
+        // update internal variables
+        sv.alpha = sv.alpha_commit + sv.dlambda;
     }
 
+
+
+
     // compute tangent modulus tensor
-    if (t_flag) {
-        if (doImplEx) {
+    if (do_tangent) {
+        if (use_implex) { //implex
             // compute tangent modulus tensor
-            sv.C(1, 1) = Kfriction / (1 + Kfriction * dlambda);
-            sv.C(2, 2) = Kfriction / (1 + Kfriction * dlambda);
+            sv.C(1, 1) = Kfriction / (1 + Kfriction * sv.dlambda);
+            sv.C(2, 2) = Kfriction / (1 + Kfriction * sv.dlambda);
         }
-        else {
-            if (sv.beta <= 0.0) {
-                if (slipfunction < 0.0) {                                           //stick
-                    sv.C(1, 1) = Kfriction;
-                    sv.C(2, 2) = Kfriction;
+        else { // implicit
+            if (sv.beta <= 0.0) { // if contact
+                if (!sv.initial) {
+                    sv.C(1, 0) = mu * Knormal * utils::sign(ST(0)) * utils::sign(sv.sig(0));
+                    sv.C(2, 0) = mu * Knormal * utils::sign(ST(1)) * utils::sign(sv.sig(0));
                 }
-                else {                                                              // slip
-                    sv.C(1, 0) = mu * Knormal * dir(0) * utils::sign(sv.sig(0));
-                    sv.C(2, 0) = mu * Knormal * dir(1) * utils::sign(sv.sig(0));
+                if (slip_function > 0.0) {                                   //slip
+                    sv.C(1, 1) = sv.C(2, 2) = 0.0;
                 }
             }
         }
     }
 }
 
-void ZeroLengthImplexContact::updateInternal(bool do_implex, bool do_tangent)
-{
-    computeMaterialStuff(do_implex, do_tangent);
-}
-
-void ZeroLengthImplexContact::computeGenericStiffness(const Matrix& C, Matrix& K)
+void ZeroLengthImplexContact::formStiffnessMatrix(const Matrix& C, Matrix& K)
 {
     // element stiffness in local system
     static Matrix KL(6, 6);
-    const Matrix& B = computeB();
+    const Matrix& B = theBMatrix();
     KL.addMatrixTripleProduct(0.0, B, C, 1.0);
 
     // element stiffness in global system, local DOFset
     static Matrix KG(6, 6);
-    const Matrix& T2 = computeRotMatrix2();
-    KG.addMatrixTripleProduct(0.0, T2, KG, 1.0);
+    const Matrix& T2 = getRotationMatrix66();
+    KG.addMatrixTripleProduct(0.0, T2, KL, 1.0);
 
     // element tangent in global DOFset
     K.Zero();
@@ -963,12 +952,14 @@ void ZeroLengthImplexContact::computeGenericStiffness(const Matrix& C, Matrix& K
     for (int i = 0; i < numDIM; i++) {
         for (int j = 0; j < numDIM; j++) {
             K(i, j) = KG(i, j);
+            K(i + index, j) = KG(i + 3, j);
+            K(i, j + index) = KG(i, j + 3);
             K(i + index, j + index) = KG(i + 3, j + 3);
         }
     }
 }
 
-const Matrix& ZeroLengthImplexContact::computeB()
+const Matrix& ZeroLengthImplexContact::theBMatrix()
 {
     // compute diplacement jump US(2) - UM(1) (will be called strain) in local coordinates
     static Matrix B(3, 6);

@@ -124,23 +124,22 @@ public:
     public:
         // material strain and stress [(0 = normal) (1 = tangent_1) (2 = tangent_2)]
         Vector eps = Vector(3);             // material strain 
-        Vector eps_commit = Vector(3);      // commited material strain
-        Vector deps = Vector(3);            // strain increment
+        Vector eps_commit = Vector(3);      // committed material strain
         Vector sig = Vector(3);             // contact stress
-        Vector sig_commit = Vector(3);      // commited contact stress
+        Vector sig_commit = Vector(3);      // committed contact stress
         double lambda = 0.0;                // slip multiplier
+        double lambda_commit = 0.0;         // committed slip multiplier
         double dlambda = 0.0;               // delta slip multiplier
-        double dlambda_commit = 0.0;        // commited delta slip multiplier
+        double dlambda_commit = 0.0;        // committed delta slip multiplier
         // state variables for implex
-        double alpha = 0.0;
+        double alpha = 0.0;                 // internal variable related to contact
         double alpha_commit = 0.0;
         double alpha_commit_old = 0.0;
-        double beta = 0.0;                  // plastic multiplier (contact)
-        double beta_commit = 0.0;           // commited plastic multiplier
-        double beta_commit_old = 0.0;       // prev. commited plastic multiplier
-        double dlambda_commit_old = 0.0;    // prev. commited delta slip multiplier
+        double beta = 0.0;                  // internal variable related to friction
+        double beta_commit = 0.0;           
+        double beta_commit_old = 0.0;        
         double dtime_n = 0.0;               // time factor
-        double dtime_n_commit = 0.0;        // commited time factor
+        double dtime_n_commit = 0.0;        // committed time factor
         bool dtime_is_user_defined = false;
         bool dtime_first_set = false;
         // modulus

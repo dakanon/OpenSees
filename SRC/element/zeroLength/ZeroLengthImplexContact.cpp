@@ -340,12 +340,12 @@ int ZeroLengthImplexContact::commitState(void)
     // store previously committed variables [step (n-1) --> (n)]
     sv.alpha_commit_old = sv.alpha_commit;
     sv.beta_commit_old = sv.beta_commit;
-    sv.dlambda_commit_old = sv.dlambda_commit;
     // store converged material state variables [step (n) --> (n+1)]
     sv.eps_commit = sv.eps;
     sv.sig_commit = sv.sig;
     sv.alpha_commit = sv.alpha;
     sv.beta_commit = sv.beta;
+    sv.lambda_commit = sv.lambda;
     sv.dlambda_commit = sv.lambda;
     sv.dtime_n_commit = sv.dtime_n;
     // done
@@ -359,12 +359,12 @@ int ZeroLengthImplexContact::revertToLastCommit(void)
     sv.sig = sv.sig_commit;
     sv.alpha = sv.alpha_commit;
     sv.beta = sv.beta_commit;
+    sv.lambda = sv.lambda_commit;
     sv.dlambda = sv.dlambda_commit;
     sv.dtime_n = sv.dtime_n_commit;
     // restore converged values [step (n) --> (n-1)]
     sv.alpha_commit = sv.alpha_commit_old;
     sv.beta_commit = sv.beta_commit_old;
-    sv.dlambda_commit = sv.dlambda_commit_old;
     //done
     return 0;
 }
@@ -468,17 +468,45 @@ int ZeroLengthImplexContact::sendSelf(int commitTag, Channel& theChannel) {
 
     int res = 0;
     int dataTag = this->getDbTag();
-    static Vector data(10);
+    static Vector data(36);
     data(0) = this->getTag();
     data(1) = Knormal;
     data(2) = Kfriction;
     data(3) = mu;
-    data(4) = use_implex;
-    data(5) = Xorient(0);
-    data(6) = Xorient(1);
-    data(7) = Xorient(2);
-    data(8) = numDIM;
-    data(9) = numDOF[0];
+    data(4) = double(numDIM);
+    data(5) = double(numDOF[0]);
+    data(6) = double(numDOF[1]);
+    data(7) = double(use_implex);
+    data(8) = Xorient(0);
+    data(9) = Xorient(1);
+    data(10) = Xorient(2);
+    data(11) = sv.eps(0);
+    data(12) = sv.eps(1);
+    data(13) = sv.eps(2);
+    data(14) = sv.eps_commit(0);
+    data(15) = sv.eps_commit(1);
+    data(16) = sv.eps_commit(2);
+    data(17) = sv.sig(0);
+    data(18) = sv.sig(1);
+    data(19) = sv.sig(2);
+    data(20) = sv.sig_commit(0);
+    data(21) = sv.sig_commit(1);
+    data(22) = sv.sig_commit(2);
+    data(23) = sv.lambda;
+    data(24) = sv.lambda_commit;
+    data(25) = sv.dlambda;
+    data(26) = sv.dlambda_commit;
+    data(27) = sv.alpha;
+    data(28) = sv.alpha_commit;
+    data(29) = sv.alpha_commit_old;
+    data(30) = sv.beta;
+    data(31) = sv.beta_commit;
+    data(32) = sv.beta_commit_old;
+    data(33) = sv.dtime_n;
+    data(34) = sv.dtime_n_commit;
+    data(35) = double(sv.dtime_is_user_defined);
+    data(36) = double(sv.dtime_first_set);
+
 
     res = theChannel.sendVector(dataTag, commitTag, data);
     if (res < 0) {
@@ -497,7 +525,7 @@ int ZeroLengthImplexContact::recvSelf(int commitTag, Channel& theChannel, FEM_Ob
 
     int res;
     int dataTag = this->getDbTag();
-    static Vector data(10);
+    static Vector data(36);
     res = theChannel.recvVector(dataTag, commitTag, data);
     if (res < 0) {
         opserr << "WARNING ZeroLengthImplexContact::recvSelf() - failed to receive Vector\n";
@@ -507,12 +535,39 @@ int ZeroLengthImplexContact::recvSelf(int commitTag, Channel& theChannel, FEM_Ob
     Knormal = data(1);
     Kfriction = data(2);
     mu = data(3);
-    use_implex = (bool)data(4);
-    Xorient(0) = data(5);
-    Xorient(1) = data(6);
-    Xorient(2) = data(7);
-    numDIM = (int)data(8);
-    numDOF[0] = (int)data(9);
+    numDIM = int(data(4));
+    numDOF[0] = int(data(5));
+    numDOF[1] = int(data(6));
+    use_implex = bool(data(7));
+    Xorient(0) = data(8);
+    Xorient(1) = data(9);
+    Xorient(2) = data(10);
+    sv.eps(0) = data(11);
+    sv.eps(1) = data(12);
+    sv.eps(2) = data(13);
+    sv.eps_commit(0) = data(14);
+    sv.eps_commit(1) = data(15);
+    sv.eps_commit(2) = data(16);
+    sv.sig(0) = data(17);
+    sv.sig(1) = data(18);
+    sv.sig(2) = data(19);
+    sv.sig_commit(0) = data(20);
+    sv.sig_commit(1) = data(21);
+    sv.sig_commit(2) = data(22);
+    sv.lambda = data(23);
+    sv.lambda_commit = data(24);
+    sv.dlambda = data(25);
+    sv.dlambda_commit = data(26);
+    sv.alpha = data(27);
+    sv.alpha_commit = data(28);
+    sv.alpha_commit_old = data(29);
+    sv.beta = data(30);
+    sv.beta_commit = data(31);
+    sv.beta_commit_old = data(32);
+    sv.dtime_n = data(33);
+    sv.dtime_n_commit = data(34);
+    sv.dtime_is_user_defined = bool(data(35));
+    sv.dtime_first_set = bool(data(36));
 
     res = theChannel.recvID(dataTag, commitTag, connectedExternalNodes);
     if (res < 0) {
@@ -828,6 +883,7 @@ void ZeroLengthImplexContact::updateInternal(bool do_implex, bool do_tangent)
 {
     Vector ST(2);                   // trial tangent stress
     Vector slip_dir(2);             // slip direction vector
+    Vector deps(3);                 // strain increment
     double slip_function = 0.0;     // slip function
     double tau_y = 0.0;             // yield friciton strength
     sv.C.Zero();                    // initialize the tangent
@@ -837,7 +893,7 @@ void ZeroLengthImplexContact::updateInternal(bool do_implex, bool do_tangent)
     sv.beta = sv.beta_commit;
     sv.dlambda = sv.dlambda_commit;
     // compute strain increment
-    sv.deps = sv.eps - sv.eps_commit;
+    deps = sv.eps - sv.eps_commit;
 
     // time factor for explicit extrapolation
     double time_factor = 1.0;
@@ -865,7 +921,7 @@ void ZeroLengthImplexContact::updateInternal(bool do_implex, bool do_tangent)
     }
     else {  // implicit
         // update internal variables
-        sv.beta = sv.beta_commit + sv.deps(0);
+        sv.beta = sv.beta_commit + deps(0);
         if (sv.eps(0) <= 0.0) {  // if contact
             // fill-in initial stiffness
             sv.C(0, 0) = Knormal;
@@ -880,8 +936,8 @@ void ZeroLengthImplexContact::updateInternal(bool do_implex, bool do_tangent)
 
     // Friction Model
     // compute trial friction stress
-    ST(0) = sv.sig_commit(1) + Kfriction * sv.deps(1);
-    ST(1) = sv.sig_commit(2) + Kfriction * sv.deps(2);
+    ST(0) = sv.sig_commit(1) + Kfriction * deps(1);
+    ST(1) = sv.sig_commit(2) + Kfriction * deps(2);
     // get slip direction vector
     if (ST.Norm() > 0.0) {
         slip_dir(0) = ST(0) / ST.Norm();

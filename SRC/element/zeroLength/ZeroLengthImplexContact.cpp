@@ -338,11 +338,13 @@ int ZeroLengthImplexContact::commitState(void)
         updateInternal(false, false);  // explicit_phase?, do_tangent?
     }
     // store previously committed variables [step (n-1) --> (n)]
+    sv.alpha_commit_old = sv.alpha_commit;
     sv.beta_commit_old = sv.beta_commit;
     sv.dlambda_commit_old = sv.dlambda_commit;
     // store converged material state variables [step (n) --> (n+1)]
     sv.eps_commit = sv.eps;
     sv.sig_commit = sv.sig;
+    sv.alpha_commit = sv.alpha;
     sv.beta_commit = sv.beta;
     sv.dlambda_commit = sv.lambda;
     sv.dtime_n_commit = sv.dtime_n;
@@ -355,10 +357,12 @@ int ZeroLengthImplexContact::revertToLastCommit(void)
     // restore converged values [step (n+1) --> (n)]
     sv.eps = sv.eps_commit;
     sv.sig = sv.sig_commit;
+    sv.alpha = sv.alpha_commit;
     sv.beta = sv.beta_commit;
-    sv.lambda = sv.dlambda_commit;
+    sv.dlambda = sv.dlambda_commit;
     sv.dtime_n = sv.dtime_n_commit;
     // restore converged values [step (n) --> (n-1)]
+    sv.alpha_commit = sv.alpha_commit_old;
     sv.beta_commit = sv.beta_commit_old;
     sv.dlambda_commit = sv.dlambda_commit_old;
     //done
@@ -878,7 +882,15 @@ void ZeroLengthImplexContact::updateInternal(bool do_implex, bool do_tangent)
     // compute trial friction stress
     ST(0) = sv.sig_commit(1) + Kfriction * sv.deps(1);
     ST(1) = sv.sig_commit(2) + Kfriction * sv.deps(2);
-    slip_dir = ST.Normalize();
+    // get slip direction vector
+    if (ST.Norm() > 0.0) {
+        slip_dir(0) = ST(0) / ST.Norm();
+        slip_dir(1) = ST(1) / ST.Norm();
+    }
+    else {
+        slip_dir(0) = 0.0;
+        slip_dir(1) = 0.0;
+    }
     if (do_implex && use_implex) { // explicit phase
         // explicit extrapolation
         sv.alpha = sv.alpha_commit + time_factor * (sv.alpha_commit - sv.alpha_commit_old);
@@ -922,10 +934,8 @@ void ZeroLengthImplexContact::updateInternal(bool do_implex, bool do_tangent)
         }
         else { // implicit
             if (sv.beta <= 0.0) { // if contact
-                if (!sv.initial) {
-                    sv.C(1, 0) = mu * Knormal * slip_dir(0) * utils::sign(sv.sig(0));
-                    sv.C(2, 0) = mu * Knormal * slip_dir(1) * utils::sign(sv.sig(0));
-                }
+                sv.C(1, 0) = mu * Knormal * slip_dir(0) * utils::sign(sv.sig(0));
+                sv.C(2, 0) = mu * Knormal * slip_dir(1) * utils::sign(sv.sig(0));
                 if (slip_function > 0.0) {                                   //slip
                     sv.C(1, 1) = sv.C(2, 2) = 0.0;
                 }
